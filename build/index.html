@@ -85,6 +85,25 @@
             document.getElementById('header-container').innerHTML = data;
           })
           .catch(error => console.error('Error loading header:', error));
+
+        fetch('components/contacts.html')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('contacts-container').outerHTML = data;
+          })
+          .catch(error => console.error('Error loading contacts:', error));
+        fetch('components/notifications.html')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('notifications-container').outerHTML = data;
+          })
+          .catch(error => console.error('Error loading notifications:', error));
+        fetch('components/useraccount.html')
+          .then(response => response.text())
+          .then(data => {
+            document.getElementById('user-account-container').outerHTML = data;
+          })
+          .catch(error => console.error('Error loading user account:', error));
       </script>
 
 
@@ -184,8 +203,8 @@
       <footer class="footer mt-auto">
         <div class="copyright bg-white">
           <p>
-            &copy; <span id="copy-year"></span> Copyright  by <a class="text-primary"
-              href="#" target="_blank">Nikhil</a>.
+            &copy; <span id="copy-year"></span> Copyright by <a class="text-primary" href="#"
+              target="_blank">Nikhil</a>.
           </p>
         </div>
         <script>
