@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "name": "analyze-mytrade",
+  "version": "1.0.0",
+  "description": "To Analyze historical trade transactions.",
+  "main": "preview.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikhilsCodeHub/analyze-mytrade.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NikhilsCodeHub/analyze-mytrade/issues"
+  },
+  "homepage": "https://github.com/NikhilsCodeHub/analyze-mytrade#readme"
+}
