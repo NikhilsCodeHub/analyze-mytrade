@@ -39,7 +39,7 @@ $(document).ready(function () {
   $('[data-toggle="popover"]').popover();
 
   /*======== 3. JVECTORMAP HOME WORLD ========*/
-  var homeWorld = $("#home-world");
+/*   var homeWorld = $("#home-world");
   if (homeWorld.length != 0) {
     var colorData = {
       CA: 106,
@@ -67,10 +67,10 @@ $(document).ready(function () {
         ],
       },
     });
-  }
+  } */
 
   /*======== 4. JVECTORMAP USA REGIONS VECTOR MAP ========*/
-  var usVectorMap = $("#us-vector-map-marker");
+  /* var usVectorMap = $("#us-vector-map-marker");
   if (usVectorMap.length != 0) {
     usVectorMap.vectorMap({
       map: "us_aea",
@@ -104,7 +104,7 @@ $(document).ready(function () {
         },
       ],
     });
-  }
+  } */
 
   /*======== 5. COUNTRY SALES RANGS ========*/
   var countrySalesRange = $("#country-sales-range");
@@ -182,7 +182,7 @@ $(document).ready(function () {
   }
 
   /*======== 6. JVECTORMAP HOME WORLD ========*/
-  var countryWithMarker = $("#world-country-with-marker");
+ /*  var countryWithMarker = $("#world-country-with-marker");
   if (countryWithMarker.length != 0) {
     var colorData = {
       CA: 106,
@@ -239,7 +239,7 @@ $(document).ready(function () {
       },
     });
   }
-
+ */
   /*======== 7. CODE EDITOR ========*/
   var codeEditor = document.getElementById("code-editor");
   if (codeEditor) {
@@ -265,7 +265,7 @@ $(document).ready(function () {
   }
 
   /*======== 8. QUILL TEXT EDITOR ========*/
-  var quillHook = document.getElementById("editor");
+/*   var quillHook = document.getElementById("editor");
   if (quillHook !== null) {
     var quill = new Quill(quillHook, {
       modules: {
@@ -276,7 +276,7 @@ $(document).ready(function () {
       placeholder: "Enter Text ...",
       theme: "snow",
     });
-  }
+  } */
 
   /*======== 9. MULTIPLE SELECT ========*/
   var select2Multiple = $(".js-example-basic-multiple");
@@ -369,7 +369,7 @@ $(document).ready(function () {
   NProgress.done();
 
   /*======== 14. DATA TABLE ========*/
-  var productsTable = $("#productsTable");
+/*   var productsTable = $("#productsTable");
   if (productsTable.length != 0) {
     productsTable.DataTable({
       info: false,
@@ -409,7 +409,7 @@ $(document).ready(function () {
       ],
     });
   }
-
+ */
   /*======== 15. OWL CAROUSEL ========*/
   var slideOnly = $(".slide-only");
   if (slideOnly.length != 0) {
