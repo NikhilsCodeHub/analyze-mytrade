@@ -30,7 +30,7 @@
 
 
 
-  <link href="plugins/DataTables/dataTables.min.css" rel="stylesheet" />
+  <link href="plugins/DataTables/DataTables-1.10.18/css/jquery.dataTables.min.css" rel="stylesheet" />
 
   <link href="plugins/daterangepicker/daterangepicker.css" rel="stylesheet" />
 
@@ -112,6 +112,8 @@
         ===================================== -->
       <div class="content-wrapper">
         <div class="content">
+
+          <!-- row1 loader -->
           <!-- Top Statistics -->
           <div class="row">
             <div id="row1-container"></div>
@@ -324,25 +326,13 @@
 
 
 
-
+  <!-- javascript dependencies -->
   <script src="plugins/jquery/jquery.min.js"></script>
   <script src="plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="plugins/simplebar/simplebar.min.js"></script>
   <script src="https://unpkg.com/hotkeys-js/dist/hotkeys.min.js"></script>
-
-
-
   <script src="plugins/apexcharts/apexcharts.min.js"></script>
-
-
-
-  <script src="plugins/DataTables/dataTables.min.js"></script>
-
-
-
-
-
-
+  <script src="plugins/DataTables/DataTables-1.10.18/js/jquery.dataTables.min.js"></script>
   <script src="plugins/daterangepicker/moment.min.js"></script>
   <script src="plugins/daterangepicker/daterangepicker.js"></script>
   <script>
@@ -363,42 +353,27 @@
     });
   </script>
 
-
-
-
-  <script src="plugins/toaster/toastr.min.js"></script>
-
-
-
-  <script src="js/mono.js"></script>
-  <script src="js/chart.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/custom.js"></script>
-
-
-
-
-  <!--  -->
+  <!-- sidebar loader -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       fetch('components/sidebar.html')
         .then(response => response.text())
         .then(data => {
-          console.log(document.getElementById('sidebar-container').innerHTML);
+          //console.log(document.getElementById('sidebar-container').innerHTML);
           document.getElementById('sidebar-container').innerHTML = data;
         })
         .catch(error => console.error('Error loading sidebar:', error));
     });
   </script>
-  <script>
-    /*           fetch('components/header.html')
-            .then(response => response.text())
-            .then(data => {
-              console.log(document.getElementById('header-container').innerHTML);
-              document.getElementById('header-container').innerHTML = data;
-            })
-            .catch(error => console.error('Error loading header:', error)); */
-  </script>
+
+
+<script src="plugins/toaster/toastr.min.js"></script>
+
+<script src="js/mono.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/map.js"></script>
+<script src="js/custom.js"></script>
+
 
 </body>
 

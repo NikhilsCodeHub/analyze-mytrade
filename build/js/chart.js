@@ -335,17 +335,17 @@ if (mixedChart1 !== null) {
 
     series: [
       {
-        name: "Income",
+        name: "Gains",
         type: "column",
         data: [44, 55, 57, 56, 61, 58, 63, 60, 66, 55, 47, 67],
       },
       {
-        name: "Expenses",
+        name: "Losses",
         type: "column",
         data: [76, 85, 101, 98, 87, 100, 91, 40, 94, 50, 47, 55],
       },
       {
-        name: "profit",
+        name: "Profit",
         data: [50, 40, 64, 87, -15, 104, 63, 42, 32, 60, 78, 25],
         type: "line",
       },

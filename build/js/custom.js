@@ -369,9 +369,10 @@ $(document).ready(function () {
   NProgress.done();
 
   /*======== 14. DATA TABLE ========*/
-/*   var productsTable = $("#productsTable");
+   var productsTable = $("#productsTable");
   if (productsTable.length != 0) {
     productsTable.DataTable({
+      paging: true,
       info: false,
       lengthChange: false,
       lengthMenu: [
@@ -409,7 +410,7 @@ $(document).ready(function () {
       ],
     });
   }
- */
+
   /*======== 15. OWL CAROUSEL ========*/
   var slideOnly = $(".slide-only");
   if (slideOnly.length != 0) {
