@@ -113,6 +113,39 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
     fs.createReadStream(filename).pipe(parser);
 }
 
+function importRecordsToTempTable(db, filename, records){
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION');
+        const stmt = db.prepare(`
+            INSERT INTO tbl_tempTable (
+                Date, Type, "Sub Type", Action, Symbol, "Instrument Type",
+                Description, Value, Quantity, "Average Price", Commissions,
+                Fees, Multiplier, "Root Symbol", "Underlying Symbol",
+                "Expiration Date", "Strike Price", "Call or Put", "Order #",
+                Total, Currency
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        let processed = 0;
+        for (const record of records) {
+            stmt.run(record, (err) => {
+                if (err) {
+                    console.error('Error inserting record:', err);
+                } else {
+                    processed++;
+                }
+            });
+        }
+        stmt.finalize();
+        db.run('COMMIT', (err) => {
+            if (err) {
+                console.error('Error committing transaction:', err);
+            } else {
+                console.log(`Successfully imported ${processed} records from ${filename}`);
+            }
+        });
+    });
+}
+
 function importRecordsToDb(db, filename, records, onComplete) {
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');

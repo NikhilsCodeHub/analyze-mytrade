@@ -56,3 +56,21 @@ Date,Type,"Sub Type",Action,Symbol,"Instrument Type",Description,Value,Quantity,
 
 
 */
+
+
+CREATE TABLE IF NOT EXISTS tbl_finaltrades (Date TEXT, Type TEXT, Sub-Type TEXT, Action TEXT, Symbol TEXT, Instrument-Type TEXT, Description TEXT, Value REAL, Quantity INTEGER, Average-Price REAL, Commissions REAL, Fees REAL, Multiplier REAL, Root-Symbol TEXT, Underlying-Symbol TEXT, Expiration-Date TEXT, Strike-Price REAL, Call-or-Put TEXT, Order-Number TEXT, Total REAL, Currency TEXT);
+
+
+select count(*) from tbl_finaltrades;
+select count(*) from temp_import;
+
+/*
+delete from tbl_finaltrades;
+*/
+
+INSERT INTO tbl_finaltrades (Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency) 
+
+
+SELECT Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM temp_import ;
+
+SELECT Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM tbl_finaltrades;
