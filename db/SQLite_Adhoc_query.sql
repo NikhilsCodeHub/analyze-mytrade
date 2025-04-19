@@ -66,11 +66,19 @@ select count(*) from temp_import;
 
 /*
 delete from tbl_finaltrades;
+delete from tbl_tempData;
+delete from temp_import;
 */
 
 INSERT INTO tbl_finaltrades (Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency) 
 
 
-SELECT Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM temp_import ;
+SELECT Date,Type,Sub-Type,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM tbl_tempData ;
 
-SELECT Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM tbl_finaltrades;
+SELECT Date,Type,Sub-Type,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM  tbl_rawdata;
+
+
+use DATABASE trades.db;
+select * from tbl_finaltrades;
+
+

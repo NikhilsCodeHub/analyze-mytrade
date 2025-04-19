@@ -3,12 +3,12 @@ const { parse } = require('csv-parse');
 const sqlite3 = require('sqlite3').verbose();
 
 // Create or open SQLite database
-const db = new sqlite3.Database('./tastytrades.db', (err) => {
+const db = new sqlite3.Database('./trades.db', (err) => {
     if (err) {
         console.error('Error opening database:', err);
         process.exit(1);
     }
-    console.log('Connected to SQLite database');
+    console.log('Connected to SQLite database : ' + db.filename);
 });
 
 // Create table if it doesn't exist
@@ -16,40 +16,79 @@ const createTable = `
 CREATE TABLE IF NOT EXISTS tbl_rawdata (
     Date TEXT,
     Type TEXT,
-    "Sub Type" TEXT,
+    Sub_Type TEXT,
     Action TEXT,
     Symbol TEXT,
-    "Instrument Type" TEXT,
+    Instrument_Type TEXT,
     Description TEXT,
     Value REAL,
     Quantity REAL,
-    "Average Price" REAL,
+    Average_Price REAL,
     Commissions REAL,
     Fees REAL,
     Multiplier INTEGER,
-    "Root Symbol" TEXT,
-    "Underlying Symbol" TEXT,
-    "Expiration Date" TEXT,
-    "Strike Price" REAL,
-    "Call or Put" TEXT,
-    "Order #" TEXT,
+    Root_Symbol TEXT,
+    Underlying_Symbol TEXT,
+    Expiration_Date TEXT,
+    Strike_Price REAL,
+    Call_or_Put TEXT,
+    Order_Number TEXT,
     Total REAL,
     Currency TEXT
 )`;
 
-db.run(createTable, (err) => {
-    if (err) {
-        console.error('Error creating table:', err);
-        process.exit(1);
-    }
-    console.log('Table created or already exists');
-    processFiles();
+const createTempTable = `
+CREATE TABLE IF NOT EXISTS tbl_tempData (
+    Date TEXT,
+    Type TEXT,
+    Sub_Type TEXT,
+    Action TEXT,
+    Symbol TEXT,
+    Instrument_Type TEXT,
+    Description TEXT,
+    Value REAL,
+    Quantity REAL,
+    Average_Price REAL,
+    Commissions REAL,
+    Fees REAL,
+    Multiplier INTEGER,
+    Root_Symbol TEXT,
+    Underlying_Symbol TEXT,
+    Expiration_Date TEXT,
+    Strike_Price REAL,
+    Call_or_Put TEXT,
+    Order_Number TEXT,
+    Total REAL,
+    Currency TEXT
+)`;
+
+db.serialize(() => {
+    db.run(createTable, (err) => {
+        if (err) {
+            console.error('Error creating table:', err);
+            process.exit(1);
+        }
+        console.log('Table created or already exists');
+    });
+
+    db.run(createTempTable, (err) => {
+        if (err) {
+            console.error('Error creating temp table:', err);
+            process.exit(1);
+        }
+        console.log('Temp table created or already exists');
+        processFiles();
+    });
 });
 
 // Modularized import_trades.js
+function processFiles() {
+    const files = parseArguments();
+    processAllFiles(db, files);
+}
 
 function parseArguments() {
-    const arg = process.argv[2];
+    const arg = process.argv.slice(2, 12).join(',');
     if (!arg) {
         console.error('Usage: node import_trades.js <file1.csv,file2.csv,...>');
         process.exit(1);
@@ -59,7 +98,27 @@ function parseArguments() {
         console.error('No files specified.');
         process.exit(1);
     }
+    console.log(`Received ${files.length} files: ${files.join(', ')}`);
     return files;
+}
+
+function processAllFiles(db, files) {
+    for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+        const filename = files[fileIndex];
+        console.log(`Starting processing ${fileIndex + 1} of ${files.length}: ${filename}`);
+        parseCsvAndNormalize(
+            filename,
+            (records) => {
+                //console.log(`Parsed ${records.length} records from ${filename}`);
+                importRecordsToTempTable(db, filename, records, () => { });
+            },
+            (err) => {
+                console.error(`Error parsing CSV for ${filename}:`, err);
+            }
+        );
+    }
+    console.log('All files processed');
+   //db.close();
 }
 
 function parseCsvAndNormalize(filename, onSuccess, onError) {
@@ -73,19 +132,19 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
             // Clean up numeric values
             record.Value = parseFloat(record.Value?.replace(/[^-0-9.]/g, '') || 0);
             record.Quantity = parseFloat(record.Quantity);
-            record.AveragePrice = parseFloat(record['Average Price']?.replace(/[^-0-9.]/g, '') || 0);
+            record.AveragePrice = parseFloat(record['Average_Price']?.replace(/[^-0-9.]/g, '') || 0);
             record.Commissions = parseFloat(record.Commissions);
             record.Fees = parseFloat(record.Fees);
             record.Multiplier = parseInt(record.Multiplier);
-            record.StrikePrice = record['Strike Price'] ? parseFloat(record['Strike Price']) : null;
+            record.StrikePrice = record['Strike_Price'] ? parseFloat(record['Strike_Price']) : null;
             record.Total = parseFloat(record.Total?.replace(/[^-0-9.]/g, '') || 0);
             records.push([
                 record.Date,
                 record.Type,
-                record['Sub Type'],
+                record.Sub_Type,
                 record.Action,
                 record.Symbol,
-                record['Instrument Type'],
+                record.Instrument_Type,
                 record.Description,
                 record.Value,
                 record.Quantity,
@@ -93,12 +152,12 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
                 record.Commissions,
                 record.Fees,
                 record.Multiplier,
-                record['Root Symbol'],
-                record['Underlying Symbol'],
-                record['Expiration Date'],
+                record.Root_Symbol,
+                record.Underlying_Symbol,
+                record.Expiration_Date,
                 record.StrikePrice,
-                record['Call or Put'],
-                record['Order #'],
+                record.Call_or_Put,
+                record.Order_Number,
                 record.Total,
                 record.Currency
             ]);
@@ -109,6 +168,7 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
     });
     parser.on('end', () => {
         onSuccess(records);
+        console.log(`Successfully parsed ${records.length} records from ${filename}`);
     });
     fs.createReadStream(filename).pipe(parser);
 }
@@ -117,11 +177,11 @@ function importRecordsToTempTable(db, filename, records){
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         const stmt = db.prepare(`
-            INSERT INTO tbl_tempTable (
-                Date, Type, "Sub Type", Action, Symbol, "Instrument Type",
-                Description, Value, Quantity, "Average Price", Commissions,
-                Fees, Multiplier, "Root Symbol", "Underlying Symbol",
-                "Expiration Date", "Strike Price", "Call or Put", "Order #",
+            INSERT INTO tbl_tempData (
+                Date, Type, "Sub_Type", Action, Symbol, "Instrument_Type",
+                Description, Value, Quantity, "Average_Price", Commissions,
+                Fees, Multiplier, "Root_Symbol", "Underlying_Symbol",
+                "Expiration_Date", "Strike_Price", "Call_or_Put", "Order_Number",
                 Total, Currency
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
@@ -140,12 +200,14 @@ function importRecordsToTempTable(db, filename, records){
             if (err) {
                 console.error('Error committing transaction:', err);
             } else {
-                console.log(`Successfully imported ${processed} records from ${filename}`);
+                console.log(`Completed importing ${processed} records from ${filename}`);
             }
         });
     });
 }
 
+
+/* 
 function importRecordsToDb(db, filename, records, onComplete) {
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
@@ -193,39 +255,4 @@ function importRecordsToDb(db, filename, records, onComplete) {
         }
         processRecords(0);
     });
-}
-
-function processAllFiles(db, files) {
-    let fileIndex = 0;
-    function nextFile() {
-        if (fileIndex >= files.length) {
-            console.log('All files processed');
-            db.close();
-            return;
-        }
-        const filename = files[fileIndex];
-        console.log(`Processing ${filename}`);
-        parseCsvAndNormalize(
-            filename,
-            (records) => {
-                console.log(`Parsed ${records.length} records from ${filename}`);
-                importRecordsToDb(db, filename, records, () => {
-                    fileIndex++;
-                    nextFile();
-                });
-            },
-            (err) => {
-                console.error(`Error parsing CSV for ${filename}:`, err);
-                fileIndex++;
-                nextFile();
-            }
-        );
-    }
-    nextFile();
-}
-
-function processFiles() {
-    const files = parseArguments();
-    processAllFiles(db, files);
-}
-
+} */
