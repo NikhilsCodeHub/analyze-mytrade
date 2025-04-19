@@ -67,7 +67,7 @@ select count(*) from temp_import;
 /*
 delete from tbl_finaltrades;
 delete from tbl_tempData;
-delete from temp_import;
+delete from tbl_rawdata;
 */
 
 INSERT INTO tbl_finaltrades (Date,Type,SubType,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency) 
@@ -75,10 +75,14 @@ INSERT INTO tbl_finaltrades (Date,Type,SubType,Action,Symbol,InstrumentType,Desc
 
 SELECT Date,Type,Sub-Type,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM tbl_tempData ;
 
-SELECT Date,Type,Sub-Type,Action,Symbol,InstrumentType,Description,Value,Quantity,AveragePrice,Commissions,Fees,Multiplier,RootSymbol,UnderlyingSymbol,ExpirationDate,StrikePrice,CallorPut,OrderNumber,Total,Currency FROM  tbl_rawdata;
+Insert INTO tbl_rawdata
+(Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id)
+SELECT Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id FROM  tbl_tempData
+where hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
+SELECT count(*)
+FROM tbl_tempData
+WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
-use DATABASE trades.db;
-select * from tbl_finaltrades;
-
+Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id
 

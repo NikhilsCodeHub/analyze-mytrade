@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { parse } = require('csv-parse');
 const sqlite3 = require('sqlite3').verbose();
+const crypto = require('crypto');
 
 // Create or open SQLite database
 const db = new sqlite3.Database('./trades.db', (err) => {
@@ -34,7 +35,8 @@ CREATE TABLE IF NOT EXISTS tbl_rawdata (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 )`;
 
 const createTempTable = `
@@ -59,7 +61,8 @@ CREATE TABLE IF NOT EXISTS tbl_tempData (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 )`;
 
 db.serialize(() => {
@@ -138,6 +141,7 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
             record.Multiplier = parseInt(record.Multiplier);
             record.StrikePrice = record['Strike_Price'] ? parseFloat(record['Strike_Price']) : null;
             record.Total = parseFloat(record.Total?.replace(/[^-0-9.]/g, '') || 0);
+            const hashId = crypto.createHash('md5').update(JSON.stringify(record)).digest('hex');
             records.push([
                 record.Date,
                 record.Type,
@@ -159,7 +163,8 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
                 record.Call_or_Put,
                 record.Order_Number,
                 record.Total,
-                record.Currency
+                record.Currency,
+                hashId
             ]);
         }
     });
@@ -182,8 +187,8 @@ function importRecordsToTempTable(db, filename, records){
                 Description, Value, Quantity, "Average_Price", Commissions,
                 Fees, Multiplier, "Root_Symbol", "Underlying_Symbol",
                 "Expiration_Date", "Strike_Price", "Call_or_Put", "Order_Number",
-                Total, Currency
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                Total, Currency, hash_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         let processed = 0;
         for (const record of records) {
@@ -200,7 +205,32 @@ function importRecordsToTempTable(db, filename, records){
             if (err) {
                 console.error('Error committing transaction:', err);
             } else {
-                console.log(`Completed importing ${processed} records from ${filename}`);
+                console.log(`Completed staging ${processed} records from ${filename}`);
+                // Count the inserted records
+                const countSQL = `SELECT COUNT(*) AS newCount FROM tbl_tempData WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);`;
+                db.get(countSQL, (err, row) => {
+                    if (err) {
+                        console.error('Error getting new row count from temp table for file : ', filename, err);
+                    } else {
+                        console.log(`${row.newCount} : will be inserted into rawdata from file ${filename}.`);
+                    }
+                });
+                // Insert new records from temp table into rawdata
+                const insertSQL = `
+                    INSERT INTO tbl_rawdata
+                    (Date, Type, Sub_Type, Action, Symbol, Instrument_Type, Description, Value, Quantity, Average_Price, Commissions, Fees, Multiplier, Root_Symbol, Underlying_Symbol, Expiration_Date, Strike_Price, Call_or_Put, Order_Number, Total, Currency, hash_id)
+                    SELECT Date, Type, Sub_Type, Action, Symbol, Instrument_Type, Description, Value, Quantity, Average_Price, Commissions, Fees, Multiplier, Root_Symbol, Underlying_Symbol, Expiration_Date, Strike_Price, Call_or_Put, Order_Number, Total, Currency, hash_id
+                    FROM tbl_tempData
+                    WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
+                `;
+                db.run(insertSQL, (err) => {
+                    if (err) {
+                        console.error('Error inserting into tbl_rawdata from file : ', filename, err);
+                    } else {
+                        console.log('Inserted new records into tbl_rawdata from file : ', filename);
+
+                    }
+                });
             }
         });
     });
