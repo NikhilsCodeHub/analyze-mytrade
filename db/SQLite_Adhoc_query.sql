@@ -98,5 +98,7 @@ EXCEPT
 SELECT hash_id FROM tbl_EquityOptions
 
 
-select count(*) from tbl_Futures;
-where rowid in (1638,1639,1642, 1643);
+SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price, round((Commissions + Fees)/Quantity,2) AS costPerUnit, round(Total/Quantity,2) AS totalPerUnit 
+FROM tbl_Futures 
+Where Symbol = '/MESZ4'
+ORDER BY Date ASC

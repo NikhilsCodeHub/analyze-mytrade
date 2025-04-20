@@ -21,7 +21,7 @@ function isSell(trade) {
 
 function runMatch() {
     // Fetch all futures trades ordered by date, include symbol and expiration
-    db.all(`SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price FROM tbl_Futures ORDER BY Date ASC`, (err, rows) => {
+    db.all(`SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price, round((Commissions + Fees)/Quantity,2) AS costPerUnit, round(Total/Quantity,2) AS totalPerUnit, hash_id FROM tbl_Futures ORDER BY Date ASC`, (err, rows) => {
         if (err) throw err;
         // per-symbol queues for unmatched opens
         const openLongsMap = {};
@@ -37,7 +37,7 @@ function runMatch() {
                 while (qty > 0 && queue.length > 0) {
                     const open = queue[0];
                     const matchQty = Math.min(open.qty, qty);
-                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openPrice: open.price, closePrice: trade.price});
+                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, openHashId: open.hash_id, closeHashId: trade.hash_id});
                     open.qty -= matchQty;
                     qty -= matchQty;
                     if (open.qty === 0) queue.shift();
@@ -45,7 +45,7 @@ function runMatch() {
                 // remaining opens new long
                 if (qty > 0) {
                     if (!openLongsMap[key]) openLongsMap[key] = [];
-                    openLongsMap[key].push({id: trade.id, qty, date: trade.Date, price: trade.price, Symbol: trade.Symbol, expDate: trade.expDate});
+                    openLongsMap[key].push({id: trade.id, qty, date: trade.Date, costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
                 }
             } else if (isSell(trade)) {
                 if (!openLongsMap[key]) openLongsMap[key] = [];
@@ -54,7 +54,7 @@ function runMatch() {
                 while (qty > 0 && queue.length > 0) {
                     const open = queue[0];
                     const matchQty = Math.min(open.qty, qty);
-                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openPrice: open.price, closePrice: trade.price});
+                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, openHashId: open.hash_id, closeHashId: trade.hash_id});
                     open.qty -= matchQty;
                     qty -= matchQty;
                     if (open.qty === 0) queue.shift();
@@ -62,12 +62,12 @@ function runMatch() {
                 // remaining opens new short
                 if (qty > 0) {
                     if (!openShortsMap[key]) openShortsMap[key] = [];
-                    openShortsMap[key].push({id: trade.id, qty, date: trade.Date, price: trade.price, Symbol: trade.Symbol, expDate: trade.expDate});
+                    openShortsMap[key].push({id: trade.id, qty, date: trade.Date, costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
                 }
             }
         }
         console.log(`Matched pairs: ${matches.length}`);
-        console.table(matches);
+        //console.table(matches);
         // flatten unmatched opens
         const unmatchedLongs = Object.values(openLongsMap).flat();
         const unmatchedShorts = Object.values(openShortsMap).flat();
@@ -90,14 +90,14 @@ function runMatch() {
  */
 function exportCsv(matches, openLongs, openShorts) {
     // matched
-    const matchCsv = ['symbol,expDate,openId,closeId,quantity,openDate,closeDate,openPrice,closePrice'];
-    matches.forEach(m => matchCsv.push([m.symbol, m.expDate, m.openId, m.closeId, m.quantity, m.openDate, m.closeDate, m.openPrice, m.closePrice].join(',')));
+    const matchCsv = ['symbol,expDate,openId,closeId,quantity,openDate,closeDate,openCost,closeCost,openTotal,closeTotal,price,openHashId,closeHashId'];
+    matches.forEach(m => matchCsv.push([m.symbol, m.expDate, m.openId, m.closeId, m.quantity, m.openDate, m.closeDate, m.openCost, m.closeCost, m.closeTotal, m.price, m.openHashId, m.closeHashId].join(',')));
     fs.writeFileSync('matched_futures_trades.csv', matchCsv.join('\n'));
     console.log('Wrote matched_futures_trades.csv');
     // unmatched opens
-    const unmatchedCsv = ['side,id,symbol,expDate,quantity,date,price'];
-    openLongs.forEach(o => unmatchedCsv.push(['buy_open', o.id, o.Symbol, o.expDate, o.qty, o.date, o.price].join(',')));
-    openShorts.forEach(o => unmatchedCsv.push(['sell_open', o.id, o.Symbol, o.expDate, o.qty, o.date, o.price].join(',')));
+    const unmatchedCsv = ['side,id,symbol,expDate,quantity,date,price,hashId'];
+    openLongs.forEach(o => unmatchedCsv.push(['buy_open', o.id, o.Symbol, o.expDate, o.qty, o.date, o.price, o.hash_id].join(',')));
+    openShorts.forEach(o => unmatchedCsv.push(['sell_open', o.id, o.Symbol, o.expDate, o.qty, o.date, o.price, o.hash_id].join(',')));
     fs.writeFileSync('unmatched_futures_trades.csv', unmatchedCsv.join('\n'));
     console.log('Wrote unmatched_futures_trades.csv');
 }
