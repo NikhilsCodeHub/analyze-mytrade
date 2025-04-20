@@ -79,8 +79,9 @@ function runMatch() {
             console.log(`Unmatched short opens: ${unmatchedShorts.length}`);
             console.table(unmatchedShorts);
         }
-        // export CSVs
-        exportCsv(matches, unmatchedLongs, unmatchedShorts);
+        // export CSVs -- Used for Testing.
+        //exportCsv(matches, unmatchedLongs, unmatchedShorts);
+        writeToDb(matches, unmatchedLongs, unmatchedShorts);
         db.close();
     });
 }
@@ -90,8 +91,8 @@ function runMatch() {
  */
 function exportCsv(matches, openLongs, openShorts) {
     // matched
-    const matchCsv = ['symbol,expDate,openId,closeId,quantity,openDate,closeDate,openCost,closeCost,openTotal,closeTotal,price,openHashId,closeHashId'];
-    matches.forEach(m => matchCsv.push([m.symbol, m.expDate, m.openId, m.closeId, m.quantity, m.openDate, m.closeDate, m.openCost, m.closeCost, m.closeTotal, m.price, m.openHashId, m.closeHashId].join(',')));
+    const matchCsv = ['symbol,expDate,openId,closeId,quantity,openDate,closeDate,openCost,closeCost,gainPerUnit,netProceeds,openHashId,closeHashId'];
+    matches.forEach(m => matchCsv.push([m.symbol, m.expDate, m.openId, m.closeId, m.quantity, m.openDate, m.closeDate, m.openCost, m.closeCost, m.price,((m.price + m.openCost + m.closeCost) * m.quantity).toFixed(2), m.openHashId, m.closeHashId].join(',')));
     fs.writeFileSync('matched_futures_trades.csv', matchCsv.join('\n'));
     console.log('Wrote matched_futures_trades.csv');
     // unmatched opens
@@ -100,4 +101,31 @@ function exportCsv(matches, openLongs, openShorts) {
     openShorts.forEach(o => unmatchedCsv.push(['sell_open', o.id, o.Symbol, o.expDate, o.qty, o.date, o.price, o.hash_id].join(',')));
     fs.writeFileSync('unmatched_futures_trades.csv', unmatchedCsv.join('\n'));
     console.log('Wrote unmatched_futures_trades.csv');
+}
+
+/**
+ * Persist matched and unmatched trades to DB tables and update isMatched
+ */
+function writeToDb(matches, openLongs, openShorts) {
+    db.serialize(() => {
+        db.run("CREATE TABLE IF NOT EXISTS tbl_MatchedTrades (symbol TEXT, Description TEXT, openId INTEGER, closeId INTEGER, openDate TEXT, closeDate TEXT, quantity INTEGER, openCost REAL, closeCost REAL, gainPerUnit REAL, netProceeds REAL, openHashId TEXT, closeHashId TEXT)");
+        db.run("CREATE TABLE IF NOT EXISTS tbl_OpenPositions (side TEXT, id INTEGER, symbol TEXT, openDate TEXT, quantity INTEGER, price REAL, hashId TEXT)");
+        const mt = db.prepare("INSERT INTO tbl_MatchedTrades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        matches.forEach(m => {
+            const gainPerUnit = m.price;
+            const netProceeds = ((m.price + m.openCost + m.closeCost) * m.quantity).toFixed(2);
+            mt.run(m.symbol, m.Description, m.openId, m.closeId, m.openDate, m.closeDate, m.quantity, m.openCost, m.closeCost, gainPerUnit, netProceeds, m.openHashId, m.closeHashId);
+        });
+        mt.finalize();
+        const op = db.prepare("INSERT INTO tbl_OpenPositions VALUES (?,?,?,?,?,?,?,?)");
+        openLongs.forEach(o => op.run('buy_open', o.id, o.Symbol, o.openDate, o.qty, o.price, o.hash_id));
+        openShorts.forEach(o => op.run('sell_open', o.id, o.Symbol, o.openDate, o.qty, o.price, o.hash_id));
+        op.finalize();
+        // ensure isMatched column exists (ignore if exists)
+        db.run("ALTER TABLE tbl_Futures ADD COLUMN isMatched INTEGER DEFAULT 0", () => {});
+        // mark matched rows
+        matches.forEach(m => {
+            db.run("UPDATE tbl_Futures SET isMatched = 1 WHERE rowid IN (?,?)", m.openId, m.closeId);
+        });
+    });
 }
