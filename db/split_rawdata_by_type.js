@@ -57,6 +57,7 @@ const RAW_TO_DEST = {
     'Order_Number': 'Order_Number',
     'Total': 'Total',
     'Currency': 'Currency',
+    'hash_id': 'hash_id'
 };
 
 const db = new sqlite3.Database('tastytrades.db', (err) => {

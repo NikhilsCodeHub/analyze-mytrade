@@ -97,3 +97,9 @@ CREATE TABLE IF NOT EXISTS tbl_Equities (
     Currency TEXT,
     hash_id TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_tbl_EquityOptions_hash_id ON tbl_EquityOptions(hash_id);
+CREATE INDEX IF NOT EXISTS idx_tbl_FuturesOptions_hash_id ON tbl_FuturesOptions(hash_id);
+CREATE INDEX IF NOT EXISTS idx_tbl_Futures_hash_id ON tbl_Futures(hash_id);
+CREATE INDEX IF NOT EXISTS idx_tbl_Equities_hash_id ON tbl_Equities(hash_id);
+CREATE INDEX IF NOT EXISTS idx_tbl_rawdata_hash_id ON tbl_rawdata(hash_id);

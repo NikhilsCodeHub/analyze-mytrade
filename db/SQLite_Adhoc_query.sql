@@ -89,10 +89,14 @@ Order by Date ASC;
 
 Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id
 
-SELECT hash_id, Date, count(*) 
+SELECT count(*) 
 FROM tbl_rawdata 
-WHERE "Instrument_Type" = 'Equity Option'
+WHERE "Instrument_Type" = 'Future'
 Group by hash_id, Date
 having count(*) > 1
 EXCEPT
 SELECT hash_id FROM tbl_EquityOptions
+
+
+select count(*) from tbl_Futures;
+where rowid in (1638,1639,1642, 1643);
