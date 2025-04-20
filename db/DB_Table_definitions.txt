@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS tbl_EquityOptions (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tbl_FuturesOptions (
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS tbl_FuturesOptions (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tbl_Futures (
@@ -67,7 +69,8 @@ CREATE TABLE IF NOT EXISTS tbl_Futures (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tbl_Equities (
@@ -91,5 +94,6 @@ CREATE TABLE IF NOT EXISTS tbl_Equities (
     Call_or_Put TEXT,
     Order_Number TEXT,
     Total REAL,
-    Currency TEXT
+    Currency TEXT,
+    hash_id TEXT
 );

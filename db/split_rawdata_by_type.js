@@ -31,29 +31,30 @@ const DEST_COLUMNS = [
     'Order_Number',
     'Total',
     'Currency',
+    'hash_id'
 ];
 
 // Mapping from rawdata columns to destination columns
 const RAW_TO_DEST = {
     'Date': 'Date',
     'Type': 'Type',
-    'Sub Type': 'SubType',
+    'Sub_Type': 'SubType',
     'Action': 'Action',
     'Symbol': 'Symbol',
-    'Instrument Type': 'Instrument_Type',
+    'Instrument_Type': 'Instrument_Type',
     'Description': 'Description',
     'Value': 'Value',
     'Quantity': 'Quantity',
-    'Average Price': 'Average_Price',
+    'Average_Price': 'Average_Price',
     'Commissions': 'Commissions',
     'Fees': 'Fees',
     'Multiplier': 'Multiplier',
-    'Root Symbol': 'Root_Symbol',
-    'Underlying Symbol': 'Underlying_Symbol',
-    'Expiration Date': 'Expiration_Date',
-    'Strike Price': 'Strike_Price',
-    'Call or Put': 'Call_or_Put',
-    'Order #': 'Order_Number',
+    'Root_Symbol': 'Root_Symbol',
+    'Underlying_Symbol': 'Underlying_Symbol',
+    'Expiration_Date': 'Expiration_Date',
+    'Strike_Price': 'Strike_Price',
+    'Call_or_Put': 'Call_or_Put',
+    'Order_Number': 'Order_Number',
     'Total': 'Total',
     'Currency': 'Currency',
 };
@@ -63,7 +64,7 @@ const db = new sqlite3.Database('tastytrades.db', (err) => {
         console.error('Error opening database:', err);
         process.exit(1);
     }
-    console.log('Connected to SQLite database');
+    console.log('Connected to SQLite database : ' + db.filename);
     copyRows();
 });
 
@@ -116,23 +117,25 @@ function copyRows() {
                     return rawCol ? `"${rawCol}"` : 'NULL';
                 });
                 const sql = `INSERT INTO ${destTable} (${DEST_COLUMNS.join(', ')})\n` +
-                    `SELECT ${selectCols.join(', ')} FROM tbl_rawdata WHERE "Instrument Type" = ?\n` +
-                    `EXCEPT\n` +
-                    `SELECT ${DEST_COLUMNS.join(', ')} FROM ${destTable}`;
+                    `SELECT ${selectCols.join(', ')} FROM tbl_rawdata WHERE "Instrument_Type" = ?\n` +
+                    `AND hash_id NOT IN (SELECT hash_id FROM ${destTable})`;
+                // console.log(`Executing SQL: ${sql}`);
                 try {
-                    await dbexecute(db, sql, [instrType]);
-                    // Optionally, count inserted rows if needed
-                    let info = await fetchFirst(db, `SELECT COUNT(*) as cnt FROM ${destTable}`);
+                    // Optionally, count inserted rows first.
+                    let info = await fetchFirst(db, `SELECT count(*) as cnt FROM tbl_rawdata WHERE "Instrument_Type" = "${instrType}"\n` +
+                    `AND hash_id NOT IN (SELECT hash_id FROM ${destTable})`);
                     totalCopied += info.cnt;
+                    // Now execute the INSERT.
+                    await dbexecute(db, sql, [instrType]);
                     console.log(`Copied ${info.cnt} rows to ${destTable}.`);
                 } catch (err) {
-                    console.error(`Error inserting into ${destTable}:`, err);
+                    console.error(`Error inserting into ${destTable} in database ${db.filename}:`, err);
                 }
             }
             await dbexecute(db, 'COMMIT');
-            console.log(`Copy completed ${totalCopied} rows using set-based INSERT INTO ... SELECT.`);
+            console.log(`Copy completed ${totalCopied} rows.`);
         } catch (err) {
-            console.error('Error during copyRows transaction:', err);
+            console.error('Error during copyRows transaction in database ' + db.filename + ':', err);
             try { await dbexecute(db, 'ROLLBACK'); } catch {}
         }
         db.close();

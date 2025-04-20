@@ -80,9 +80,19 @@ Insert INTO tbl_rawdata
 SELECT Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id FROM  tbl_tempData
 where hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
-SELECT count(*)
-FROM tbl_tempData
-WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
+SELECT Date, Action, Description ,Quantity,Total, Order_Number
+FROM tbl_rawdata
+Where Instrument_Type = 'Future' and Date BETWEEN '2024-08-01' AND '2025-01-31'
+Order by Date ASC;
+
+-- WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
 Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id
 
+SELECT hash_id, Date, count(*) 
+FROM tbl_rawdata 
+WHERE "Instrument_Type" = 'Equity Option'
+Group by hash_id, Date
+having count(*) > 1
+EXCEPT
+SELECT hash_id FROM tbl_EquityOptions

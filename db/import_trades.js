@@ -4,7 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
 
 // Create or open SQLite database
-const db = new sqlite3.Database('./trades.db', (err) => {
+const db = new sqlite3.Database('./tastytrades.db', (err) => {
     if (err) {
         console.error('Error opening database:', err);
         process.exit(1);
@@ -106,22 +106,37 @@ function parseArguments() {
 }
 
 function processAllFiles(db, files) {
-    for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
-        const filename = files[fileIndex];
-        console.log(`Starting processing ${fileIndex + 1} of ${files.length}: ${filename}`);
+    let idx = 0;
+    const total = files.length;
+    function processNext() {
+        if (idx >= total) {
+            // All files done: clear temp table
+            db.run('DELETE FROM tbl_tempData', (err) => {
+                if (err) console.error('Error truncating temp table:', err);
+                else console.log('Temp table cleared');
+            });
+            console.log('All files processed');
+            //db.close();
+            return;
+        }
+        const filename = files[idx];
+        console.log(`Starting processing ${idx + 1} of ${total}: ${filename}`);
         parseCsvAndNormalize(
             filename,
             (records) => {
-                //console.log(`Parsed ${records.length} records from ${filename}`);
-                importRecordsToTempTable(db, filename, records, () => { });
+                importRecordsToTempTable(db, filename, records, () => {
+                    idx++;
+                    processNext();
+                });
             },
             (err) => {
                 console.error(`Error parsing CSV for ${filename}:`, err);
+                idx++;
+                processNext();
             }
         );
     }
-    console.log('All files processed');
-   //db.close();
+    processNext();
 }
 
 function parseCsvAndNormalize(filename, onSuccess, onError) {
@@ -135,33 +150,33 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
             // Clean up numeric values
             record.Value = parseFloat(record.Value?.replace(/[^-0-9.]/g, '') || 0);
             record.Quantity = parseFloat(record.Quantity);
-            record.AveragePrice = parseFloat(record['Average_Price']?.replace(/[^-0-9.]/g, '') || 0);
+            record['Average Price'] = parseFloat(record['Average Price']?.replace(/[^-0-9.]/g, '') || 0);
             record.Commissions = parseFloat(record.Commissions);
             record.Fees = parseFloat(record.Fees);
             record.Multiplier = parseInt(record.Multiplier);
-            record.StrikePrice = record['Strike_Price'] ? parseFloat(record['Strike_Price']) : null;
+            record['Strike Price'] = record['Strike Price'] ? parseFloat(record['Strike Price']) : null;
             record.Total = parseFloat(record.Total?.replace(/[^-0-9.]/g, '') || 0);
             const hashId = crypto.createHash('md5').update(JSON.stringify(record)).digest('hex');
             records.push([
                 record.Date,
                 record.Type,
-                record.Sub_Type,
+                record['Sub Type'],
                 record.Action,
                 record.Symbol,
-                record.Instrument_Type,
+                record["Instrument Type"],
                 record.Description,
                 record.Value,
                 record.Quantity,
-                record.AveragePrice,
+                record['Average Price'],
                 record.Commissions,
                 record.Fees,
                 record.Multiplier,
-                record.Root_Symbol,
-                record.Underlying_Symbol,
-                record.Expiration_Date,
-                record.StrikePrice,
-                record.Call_or_Put,
-                record.Order_Number,
+                record['Root Symbol'],
+                record['Underlying Symbol'],
+                record['Expiration Date'],
+                record['Strike Price'],
+                record['Call or Put'],
+                record['Order #'],
                 record.Total,
                 record.Currency,
                 hashId
@@ -178,7 +193,7 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
     fs.createReadStream(filename).pipe(parser);
 }
 
-function importRecordsToTempTable(db, filename, records){
+function importRecordsToTempTable(db, filename, records, onComplete){
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         const stmt = db.prepare(`
@@ -212,7 +227,7 @@ function importRecordsToTempTable(db, filename, records){
                     if (err) {
                         console.error('Error getting new row count from temp table for file : ', filename, err);
                     } else {
-                        console.log(`${row.newCount} : will be inserted into rawdata from file ${filename}.`);
+                        console.log(`${row.newCount} Rows : will be inserted into rawdata from file ${filename}.`);
                     }
                 });
                 // Insert new records from temp table into rawdata
@@ -225,64 +240,13 @@ function importRecordsToTempTable(db, filename, records){
                 `;
                 db.run(insertSQL, (err) => {
                     if (err) {
-                        console.error('Error inserting into tbl_rawdata from file : ', filename, err);
+                        console.error('Error inserting into rawdata from file : ', filename, err);
                     } else {
-                        console.log('Inserted new records into tbl_rawdata from file : ', filename);
-
+                        console.log('Inserted new records into rawdata from file : ', filename);
+                        if (onComplete) onComplete();
                     }
                 });
             }
         });
     });
 }
-
-
-/* 
-function importRecordsToDb(db, filename, records, onComplete) {
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
-        const stmt = db.prepare(`
-            INSERT INTO tbl_rawdata (
-                Date, Type, "Sub Type", Action, Symbol, "Instrument Type",
-                Description, Value, Quantity, "Average Price", Commissions,
-                Fees, Multiplier, "Root Symbol", "Underlying Symbol",
-                "Expiration Date", "Strike Price", "Call or Put", "Order #",
-                Total, Currency
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        let processed = 0;
-        function processRecords(idx) {
-            if (idx >= records.length) {
-                stmt.finalize();
-                db.run('COMMIT', (err) => {
-                    if (err) {
-                        console.error('Error committing transaction:', err);
-                    } else {
-                        console.log(`Successfully imported ${processed} unique records from ${filename}`);
-                    }
-                    onComplete();
-                });
-                return;
-            }
-            const record = records[idx];
-            db.get('SELECT 1 FROM tbl_rawdata WHERE Date = ? AND Description = ? AND Value = ? AND Total = ? LIMIT 1', [record[0], record[6], record[7], record[19]], (err, row) => {
-                if (err) {
-                    console.error('Error checking for duplicate:', err);
-                    processRecords(idx + 1);
-                } else if (row) {
-                    processRecords(idx + 1);
-                } else {
-                    stmt.run(record, (err) => {
-                        if (err) {
-                            console.error('Error inserting record:', err);
-                        } else {
-                            processed++;
-                        }
-                        processRecords(idx + 1);
-                    });
-                }
-            });
-        }
-        processRecords(0);
-    });
-} */
