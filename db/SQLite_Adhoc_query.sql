@@ -82,8 +82,47 @@ where hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
 SELECT Date, Action, Description ,Quantity,Total, Order_Number
 FROM tbl_rawdata
-Where Instrument_Type = 'Future' and Date BETWEEN '2024-08-01' AND '2025-01-31'
+Where Instrument_Type = 'Future' and Date BETWEEN '2025-04-16' AND '2025-04-19'
 Order by Date ASC;
+
+SELECT Date, Symbol, Action, Description ,Quantity,Total, Order_Number, isMatched
+FROM tbl_Futures
+Where Date BETWEEN '2025-04-09' AND '2025-04-10'
+Order by Date ASC;
+
+SELECT rowid AS id, Date, Description, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price, round((Commissions + Fees)/Quantity,2) AS costPerUnit, round(Total/Quantity,2) AS totalPerUnit, hash_id FROM tbl_Futures WHERE isMatched != 1 ORDER BY Date ASC
+/* 
+Select count(*)
+From tbl_Futures;
+
+Select sum(netProceeds)
+From tbl_MatchedTrades
+where Symbol = '/ESM5'
+order by OpenDate ASC;
+
+
+
+Update tbl_Futures
+Set isMatched = 0
+where description LIKE '%mark to market%';
+
+
+select 130.54 + 2877.3
+
+Select sum(Total) from tbl_FuturesOptions
+where Symbol like './ESM5%'
+// where date > '2025-04-09T15:00:00-0500';
+
+Update tbl_Futures
+Set isMatched = 0;
+Delete from tbl_MatchedTrades;
+
+
+where description LIKE '%mark to market%';
+
+Delete
+FROM tbl_Futures
+Where Date BETWEEN '2025-04-16' AND '2025-04-19' */
 
 -- WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
 
@@ -102,3 +141,15 @@ SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Action, Quantity A
 FROM tbl_Futures 
 Where Symbol = '/MESZ4'
 ORDER BY Date ASC
+
+Select * 
+FROM tbl_Futures 
+Where Symbol = '/MESZ4'
+ORDER BY Date ASC;
+
+
+SELECT symbol, sum(netProceeds) as RealizedGain
+FROM tbl_MatchedTrades
+where openDate > '2025-01-01'
+GROUP by symbol;
+

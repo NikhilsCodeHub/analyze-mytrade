@@ -20,8 +20,9 @@ function isSell(trade) {
 }
 
 function runMatch() {
+    db.run("Delete from tbl_OpenPositions;");
     // Fetch all futures trades ordered by date, include symbol and expiration
-    db.all(`SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price, round((Commissions + Fees)/Quantity,2) AS costPerUnit, round(Total/Quantity,2) AS totalPerUnit, hash_id FROM tbl_Futures ORDER BY Date ASC`, (err, rows) => {
+    db.all(`SELECT rowid AS id, Date, Description, Symbol, Expiration_Date AS expDate, Action, Quantity AS qty, Average_Price AS price, round((Commissions + Fees)/Quantity,2) AS costPerUnit, round(Total/Quantity,2) AS totalPerUnit, hash_id FROM tbl_Futures WHERE isMatched != 1 ORDER BY Date ASC`, (err, rows) => {
         if (err) throw err;
         // per-symbol queues for unmatched opens
         const openLongsMap = {};
@@ -37,7 +38,7 @@ function runMatch() {
                 while (qty > 0 && queue.length > 0) {
                     const open = queue[0];
                     const matchQty = Math.min(open.qty, qty);
-                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, openHashId: open.hash_id, closeHashId: trade.hash_id});
+                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, Description: open.Description + " | " + trade.Action + " " + trade.Description.substring(trade.Description.indexOf('@')), openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, openHashId: open.hash_id, closeHashId: trade.hash_id});
                     open.qty -= matchQty;
                     qty -= matchQty;
                     if (open.qty === 0) queue.shift();
@@ -45,7 +46,7 @@ function runMatch() {
                 // remaining opens new long
                 if (qty > 0) {
                     if (!openLongsMap[key]) openLongsMap[key] = [];
-                    openLongsMap[key].push({id: trade.id, qty, date: trade.Date, costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
+                    openLongsMap[key].push({id: trade.id, qty, date: trade.Date, Description: trade.Action + " " + trade.Description.substring(trade.Description.indexOf('@')), costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
                 }
             } else if (isSell(trade)) {
                 if (!openLongsMap[key]) openLongsMap[key] = [];
@@ -54,7 +55,7 @@ function runMatch() {
                 while (qty > 0 && queue.length > 0) {
                     const open = queue[0];
                     const matchQty = Math.min(open.qty, qty);
-                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, quantity: matchQty, openDate: open.date, closeDate: trade.Date, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, openHashId: open.hash_id, closeHashId: trade.hash_id});
+                    matches.push({symbol: trade.Symbol, expDate: trade.expDate, openId: open.id, closeId: trade.id, openDate: open.date, closeDate: trade.Date, quantity: matchQty, openCost: open.costPerUnit, closeCost: trade.costPerUnit, closeTotal: trade.totalPerUnit, price: trade.price, Description: open.Description + " | " + trade.Action + " " + trade.Description.substring(trade.Description.indexOf('@')),openHashId: open.hash_id, closeHashId: trade.hash_id});
                     open.qty -= matchQty;
                     qty -= matchQty;
                     if (open.qty === 0) queue.shift();
@@ -62,8 +63,26 @@ function runMatch() {
                 // remaining opens new short
                 if (qty > 0) {
                     if (!openShortsMap[key]) openShortsMap[key] = [];
-                    openShortsMap[key].push({id: trade.id, qty, date: trade.Date, costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
+                    openShortsMap[key].push({id: trade.id, qty, date: trade.Date, Description: trade.Action + " " + trade.Description.substring(trade.Description.indexOf('@')), costPerUnit: trade.costPerUnit, price: trade.price, totalPerUnit: trade.totalPerUnit, Symbol: trade.Symbol, expDate: trade.expDate, hash_id: trade.hash_id});
                 }
+            } else if (trade.Description && trade.Description.toLowerCase().includes('mark to market')) {
+                // mark-to-market adjustment entry
+                matches.push({
+                    symbol: trade.Symbol,
+                    Description: trade.Description,
+                    openId: trade.id,
+                    closeId: trade.id,
+                    openDate: trade.Date,
+                    closeDate: trade.Date,
+                    quantity: trade.qty,
+                    openCost: 0,
+                    closeCost: 0,
+                    price: trade.price,
+                    //gainPerUnit: trade.price * trade.qty,
+                    closeTotal: trade.totalPerUnit * trade.qty,
+                    openHashId: trade.hash_id,
+                    closeHashId: trade.hash_id
+                });
             }
         }
         console.log(`Matched pairs: ${matches.length}`);
