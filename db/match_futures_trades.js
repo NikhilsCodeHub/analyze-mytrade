@@ -108,13 +108,29 @@ function exportCsv(matches, openLongs, openShorts) {
  */
 function writeToDb(matches, openLongs, openShorts) {
     db.serialize(() => {
+        /* Only needed first time when DB is created.
+        //-------------------------------------------
         db.run("CREATE TABLE IF NOT EXISTS tbl_MatchedTrades (symbol TEXT, Description TEXT, openId INTEGER, closeId INTEGER, openDate TEXT, closeDate TEXT, quantity INTEGER, openCost REAL, closeCost REAL, gainPerUnit REAL, netProceeds REAL, openHashId TEXT, closeHashId TEXT)");
+
         db.run("CREATE TABLE IF NOT EXISTS tbl_OpenPositions (side TEXT, id INTEGER, symbol TEXT, openDate TEXT, quantity INTEGER, price REAL, hashId TEXT)");
-        const mt = db.prepare("INSERT INTO tbl_MatchedTrades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        */
+
+        // ensure no duplicate matched entries
+        db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_matched_open_close ON tbl_MatchedTrades(openId, closeId)");
+        // ensure no duplicate open positions
+        db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_open_positions ON tbl_OpenPositions(side, id)");
+        
+        const mt = db.prepare("INSERT OR IGNORE INTO tbl_MatchedTrades VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
         matches.forEach(m => {
             const gainPerUnit = m.price;
             const netProceeds = ((m.price + m.openCost + m.closeCost) * m.quantity).toFixed(2);
-            mt.run(m.symbol, m.Description, m.openId, m.closeId, m.openDate, m.closeDate, m.quantity, m.openCost, m.closeCost, gainPerUnit, netProceeds, m.openHashId, m.closeHashId);
+            mt.run(
+                m.symbol, m.Description, m.openId, m.closeId, m.openDate, m.closeDate, m.quantity, m.openCost, m.closeCost, gainPerUnit, netProceeds, m.openHashId, m.closeHashId,
+                (err) => {
+                    // ignore unique constraint failures
+                    if (err && err.code !== 'SQLITE_CONSTRAINT') console.error(err);
+                }
+            );
         });
         mt.finalize();
         const op = db.prepare("INSERT INTO tbl_OpenPositions VALUES (?,?,?,?,?,?,?,?)");
@@ -122,7 +138,7 @@ function writeToDb(matches, openLongs, openShorts) {
         openShorts.forEach(o => op.run('sell_open', o.id, o.Symbol, o.openDate, o.qty, o.price, o.hash_id));
         op.finalize();
         // ensure isMatched column exists (ignore if exists)
-        db.run("ALTER TABLE tbl_Futures ADD COLUMN isMatched INTEGER DEFAULT 0", () => {});
+        // db.run("ALTER TABLE tbl_Futures ADD COLUMN isMatched INTEGER DEFAULT 0", () => {});
         // mark matched rows
         matches.forEach(m => {
             db.run("UPDATE tbl_Futures SET isMatched = 1 WHERE rowid IN (?,?)", m.openId, m.closeId);
