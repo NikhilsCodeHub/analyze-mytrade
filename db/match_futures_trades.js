@@ -1,12 +1,7 @@
-const sqlite3 = require('sqlite3').verbose();
+const db = require('./connection');
 const fs = require('fs');
 
-// Open database
-const db = new sqlite3.Database('./tastytrades.db', err => {
-    if (err) throw err;
-    console.log('Connected to DB');
-    runMatch();
-});
+runMatch();
 
 /**
  * Action helpers
@@ -101,7 +96,7 @@ function runMatch() {
         // export CSVs -- Used for Testing.
         //exportCsv(matches, unmatchedLongs, unmatchedShorts);
         writeToDb(matches, unmatchedLongs, unmatchedShorts);
-        db.close();
+        // Do not close the db here; connection is shared globally.
     });
 }
 

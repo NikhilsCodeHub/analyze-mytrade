@@ -153,3 +153,4 @@ FROM tbl_MatchedTrades
 where openDate > '2025-01-01'
 GROUP by symbol;
 
+SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Strike_Price AS strike, [Call_or_Put] AS type, Action, Quantity AS qty, Average_Price AS price FROM tbl_FuturesOptions ORDER BY Date ASC

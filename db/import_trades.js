@@ -1,16 +1,7 @@
 const fs = require('fs');
 const { parse } = require('csv-parse');
-const sqlite3 = require('sqlite3').verbose();
+const db = require('./connection');
 const crypto = require('crypto');
-
-// Create or open SQLite database
-const db = new sqlite3.Database('./tastytrades.db', (err) => {
-    if (err) {
-        console.error('Error opening database:', err);
-        process.exit(1);
-    }
-    console.log('Connected to SQLite database : ' + db.filename);
-});
 
 // Create table if it doesn't exist
 const createTable = `
@@ -84,13 +75,13 @@ db.serialize(() => {
     });
 });
 
-// Modularized import_trades.js
 function processFiles() {
     const files = parseArguments();
-    processAllFiles(db, files);
+    processAllFiles(files);
 }
 
 function parseArguments() {
+    // parse command line arguments. Accepting upto 12 files at a time.
     const arg = process.argv.slice(2, 12).join(',');
     if (!arg) {
         console.error('Usage: node import_trades.js <file1.csv,file2.csv,...>');
@@ -105,7 +96,7 @@ function parseArguments() {
     return files;
 }
 
-function processAllFiles(db, files) {
+function processAllFiles(files) {
     let idx = 0;
     const total = files.length;
     function processNext() {
@@ -116,7 +107,6 @@ function processAllFiles(db, files) {
                 else console.log('Temp table cleared');
             });
             console.log('All files processed');
-            //db.close();
             return;
         }
         const filename = files[idx];
@@ -124,7 +114,7 @@ function processAllFiles(db, files) {
         parseCsvAndNormalize(
             filename,
             (records) => {
-                importRecordsToTempTable(db, filename, records, () => {
+                importRecordsToTempTable(filename, records, () => {
                     idx++;
                     processNext();
                 });
@@ -193,7 +183,7 @@ function parseCsvAndNormalize(filename, onSuccess, onError) {
     fs.createReadStream(filename).pipe(parser);
 }
 
-function importRecordsToTempTable(db, filename, records, onComplete){
+function importRecordsToTempTable(filename, records, onComplete){
     db.serialize(() => {
         db.run('BEGIN TRANSACTION');
         const stmt = db.prepare(`
@@ -221,7 +211,7 @@ function importRecordsToTempTable(db, filename, records, onComplete){
                 console.error('Error committing transaction:', err);
             } else {
                 console.log(`Completed staging ${processed} records from ${filename}`);
-                // Count the inserted records
+                // Count the new records to be inserted.
                 const countSQL = `SELECT COUNT(*) AS newCount FROM tbl_tempData WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);`;
                 db.get(countSQL, (err, row) => {
                     if (err) {
@@ -230,7 +220,7 @@ function importRecordsToTempTable(db, filename, records, onComplete){
                         console.log(`${row.newCount} Rows : will be inserted into rawdata from file ${filename}.`);
                     }
                 });
-                // Insert new records from temp table into rawdata
+                // Insert new records from temp table into rawdata. Remove duplicates.
                 const insertSQL = `
                     INSERT INTO tbl_rawdata
                     (Date, Type, Sub_Type, Action, Symbol, Instrument_Type, Description, Value, Quantity, Average_Price, Commissions, Fees, Multiplier, Root_Symbol, Underlying_Symbol, Expiration_Date, Strike_Price, Call_or_Put, Order_Number, Total, Currency, hash_id)
