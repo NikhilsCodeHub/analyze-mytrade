@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 
-const db = new sqlite3.Database('./tastytrades.db', (err) => {
+const db = new sqlite3.Database('db/tastytrades.db', (err) => {
   if (err) {
     console.error('Failed to connect to DB:', err);
     throw err;

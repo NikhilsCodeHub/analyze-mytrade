@@ -116,6 +116,10 @@ where Symbol like './ESM5%'
 Update tbl_Futures
 Set isMatched = 0;
 Delete from tbl_MatchedTrades;
+Drop table tbl_MatchedOptionTrades;
+Drop table tbl_OpenOptionPositions;
+
+Delete from tbl_FuturesOptions ;
 
 
 where description LIKE '%mark to market%';
@@ -124,9 +128,10 @@ Delete
 FROM tbl_Futures
 Where Date BETWEEN '2025-04-16' AND '2025-04-19' */
 
--- WHERE hash_id NOT IN (SELECT hash_id FROM tbl_rawdata);
+Delete from tbl_FuturesOptions
+WHERE hash_id  = 'cd3944c3cd35a188cce49ebdda3f5c35';
 
-Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id
+-- Date,Type,Sub_Type,Action,Symbol,Instrument_Type,Description,Value,Quantity,Average_Price,Commissions,Fees,Multiplier,Root_Symbol,Underlying_Symbol,Expiration_Date,Strike_Price,Call_or_Put,Order_Number,Total,Currency,hash_id
 
 SELECT count(*) 
 FROM tbl_rawdata 
@@ -154,3 +159,24 @@ where openDate > '2025-01-01'
 GROUP by symbol;
 
 SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Strike_Price AS strike, [Call_or_Put] AS type, Action, Quantity AS qty, Average_Price AS price FROM tbl_FuturesOptions ORDER BY Date ASC
+
+SELECT rowid AS id, Date, Symbol, Expiration_Date AS expDate, Strike_Price AS strike, [Call_or_Put] AS type, Action, Quantity AS qty, Average_Price AS price, Underlying_Symbol as rootSymbol, round((Commissions + Fees)/Quantity,2) AS costPerUnit, hash_id FROM tbl_FuturesOptions ORDER BY Date ASC
+
+
+CREATE TABLE IF NOT EXISTS tbl_MatchedOptionTrades ( 
+rootSymbol TEXT, 
+symbol TEXT, 
+ExpDate TEXT, 
+strike TEXT, 
+type TEXT, 
+openId INTEGER, 
+closeId INTEGER, 
+openDate TEXT, 
+closeDate TEXT, 
+quantity INTEGER, 
+costPerUnit REAL, 
+gainPerUnit REAL, 
+netProceeds REAL, 
+openHashId TEXT, 
+closeHashId TEXT
+);
