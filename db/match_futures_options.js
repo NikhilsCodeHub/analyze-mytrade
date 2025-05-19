@@ -91,7 +91,7 @@ function writeToDb(matches, openLongs, openShorts) {
       
 
       // ensure no duplicate matched entries
-      db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_matched_open_close ON tbl_MatchedOptionTrades(openHashId, closeHashId)");
+      db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_matched_open_close ON tbl_MatchedOptionTrades(openDate, closeDate, symbol, quantity)");
       // ensure no duplicate open positions
       db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_open_positions ON tbl_OpenOptionPositions(side, symbol)");
       
